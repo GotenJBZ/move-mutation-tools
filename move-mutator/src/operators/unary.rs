@@ -118,6 +118,24 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_negate_operator() {
+        let mut files = Files::new();
+        let fid = files.add("test", "test");
+        let loc = Loc::new(fid, codespan::Span::new(0, 1));
+        let e1 = ExpData::Value(NodeId::new(1), Value::Bool(true));
+        let exp = ExpLoc::new(e1.into_exp(), loc.clone());
+
+        let operator = Unary::new(Operation::Negate, loc, vec![exp]);
+        let source = "-";
+        let expected = [" "];
+        let result = operator.apply(source);
+        assert_eq!(result.len(), expected.len());
+        for (i, r) in result.iter().enumerate() {
+            assert_eq!(r.mutated_source, expected[i]);
+        }
+    }
+
+    #[test]
     fn test_get_file_id() {
         let mut files = Files::new();
         let fid = files.add("test", "test");

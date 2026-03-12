@@ -11,6 +11,7 @@ pub(crate) mod break_continue;
 pub(crate) mod delete_stmt;
 pub(crate) mod ifelse;
 pub(crate) mod literal;
+pub(crate) mod resource;
 pub(crate) mod unary;
 
 // Section with Move constants.

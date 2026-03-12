@@ -37,6 +37,7 @@ const PACKAGE_PATHS: &[&str] = &[
     "tests/move-assets/skip_mutation_examples",
     "tests/move-assets/check_swap_operator",
     "tests/move-assets/simple_move_2_features",
+    "tests/move-assets/resource_and_negate",
 ];
 
 // Check if the mutator works correctly on the basic packages.
@@ -364,6 +365,264 @@ fn check_mutator_uses_skip_mutation_attribute_properly() {
         assert!(!skipped_fn.contains(&fn_name));
         assert!(module_name == expected_module);
         assert!(module_name != skipped_module);
+    }
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that the resource_operation_replacement operator generates mutants for exists<T>() calls.
+// The basic_coin project contains `exists<Balance>(...)` which should produce 2 mutants (true/false).
+#[test]
+fn check_resource_operation_replacement_generates_mutants() {
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/basic_coin");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["publish_balance".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+    assert!(!report.get_mutants().is_empty());
+
+    // Count resource_operation_replacement mutations
+    let mut resource_op_count = 0;
+    for mutant in report.get_mutants() {
+        resource_op_count += mutant
+            .get_mutations()
+            .iter()
+            .filter(|m| m.get_operator_name() == "resource_operation_replacement")
+            .count();
+    }
+
+    // The publish_balance function has one `exists<Balance>(...)` call,
+    // which should generate exactly 2 mutants (true, false).
+    assert_eq!(
+        resource_op_count, 2,
+        "expected 2 resource_operation_replacement mutants for exists<Balance>, got {resource_op_count}"
+    );
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that resource_operation_replacement mutants have correct replacement values (true/false).
+#[test]
+fn check_resource_operation_replacement_produces_true_and_false() {
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/basic_coin");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["publish_balance".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+
+    let mut new_values: Vec<String> = Vec::new();
+    for mutant in report.get_mutants() {
+        for m in mutant.get_mutations() {
+            if m.get_operator_name() == "resource_operation_replacement" {
+                new_values.push(m.get_new_value().to_string());
+            }
+        }
+    }
+
+    new_values.sort();
+    assert_eq!(new_values, vec!["false", "true"]);
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that resource_operation_replacement works with multiple exists calls in a single function.
+#[test]
+fn check_resource_operation_replacement_multiple_exists() {
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/resource_and_negate");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["safe_deposit".into()]),
+        mutate_modules: ModuleFilter::Selected(vec!["ResourceOps".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+    assert!(!report.get_mutants().is_empty());
+
+    let mut resource_op_count = 0;
+    for mutant in report.get_mutants() {
+        assert_eq!(mutant.get_function_name(), "safe_deposit");
+        resource_op_count += mutant
+            .get_mutations()
+            .iter()
+            .filter(|m| m.get_operator_name() == "resource_operation_replacement")
+            .count();
+    }
+
+    // safe_deposit has one `exists<Vault>(addr)` call → 2 mutants (true, false)
+    assert_eq!(
+        resource_op_count, 2,
+        "expected 2 resource_operation_replacement mutants for safe_deposit, got {resource_op_count}"
+    );
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that has_vault function (which returns exists<T>) also gets resource mutations.
+#[test]
+fn check_resource_operation_replacement_exists_as_return_value() {
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/resource_and_negate");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["has_vault".into()]),
+        mutate_modules: ModuleFilter::Selected(vec!["ResourceOps".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+    assert!(!report.get_mutants().is_empty());
+
+    let mut resource_op_count = 0;
+    for mutant in report.get_mutants() {
+        resource_op_count += mutant
+            .get_mutations()
+            .iter()
+            .filter(|m| m.get_operator_name() == "resource_operation_replacement")
+            .count();
+    }
+
+    // has_vault has one `exists<Vault>(addr)` → 2 mutants
+    assert_eq!(
+        resource_op_count, 2,
+        "expected 2 resource_operation_replacement mutants for has_vault, got {resource_op_count}"
+    );
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that unary_operator_replacement now also catches ! (negation) operators on booleans.
+#[test]
+fn check_unary_operator_replacement_handles_not() {
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/resource_and_negate");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["apply_negation_bool".into()]),
+        mutate_modules: ModuleFilter::Selected(vec!["ArithNegate".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+    assert!(!report.get_mutants().is_empty());
+
+    let mut unary_op_count = 0;
+    for mutant in report.get_mutants() {
+        unary_op_count += mutant
+            .get_mutations()
+            .iter()
+            .filter(|m| m.get_operator_name() == "unary_operator_replacement")
+            .count();
+    }
+
+    // apply_negation_bool has `!x` → 1 unary mutant (replace ! with space)
+    assert_eq!(
+        unary_op_count, 1,
+        "expected 1 unary_operator_replacement mutant for !x, got {unary_op_count}"
+    );
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that resource_operation_replacement is NOT active when using Light mode
+// (it's only in Heavy/Custom modes).
+#[test]
+fn check_resource_operation_not_in_light_mode() {
+    use move_mutator::cli::OperatorModeArg;
+
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/basic_coin");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["publish_balance".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        mode: Some(OperatorModeArg::Light),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+
+    // No resource_operation_replacement mutations should exist in Light mode
+    for mutant in report.get_mutants() {
+        for m in mutant.get_mutations() {
+            assert_ne!(
+                m.get_operator_name(),
+                "resource_operation_replacement",
+                "resource_operation_replacement should not be active in Light mode"
+            );
+        }
+    }
+    fs::remove_dir_all(package_path).unwrap();
+}
+
+// Test that resource_operation_replacement IS active with Custom mode when explicitly selected.
+#[test]
+fn check_resource_operation_works_in_custom_mode() {
+    let config = quick_build_config();
+    let package_path = clone_project("tests/move-assets/basic_coin");
+    let outdir = package_path.join("outdir");
+
+    let options = CLIOptions {
+        mutate_functions: FunctionFilter::Selected(vec!["publish_balance".into()]),
+        out_mutant_dir: Some(outdir.clone()),
+        operators: Some(vec!["resource_operation_replacement".to_string()]),
+        ..Default::default()
+    };
+
+    let result = move_mutator::run_move_mutator(options.clone(), &config, &package_path);
+    assert!(result.is_ok());
+
+    let report_path = outdir.join("report.json");
+    let report = move_mutator::report::Report::load_from_json_file(&report_path).unwrap();
+    assert!(!report.get_mutants().is_empty());
+
+    // ALL mutations should be resource_operation_replacement
+    for mutant in report.get_mutants() {
+        for m in mutant.get_mutations() {
+            assert_eq!(
+                m.get_operator_name(),
+                "resource_operation_replacement",
+                "only resource_operation_replacement should be active in Custom mode with only that operator"
+            );
+        }
     }
     fs::remove_dir_all(package_path).unwrap();
 }

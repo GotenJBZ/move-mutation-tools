@@ -53,7 +53,7 @@ pub struct CLIOptions {
     /// - light: binary_operator_swap, break_continue_replacement, delete_statement
     /// - medium: light + literal_replacement
     /// - medium-only: literal_replacement (only what's added in medium)
-    /// - heavy (default): all 7 operators
+    /// - heavy (default): all 8 operators
     /// - heavy-only: unary_operator_replacement, binary_operator_replacement, if_else_replacement (only what's added in heavy)
     #[clap(long, value_enum, conflicts_with = "operators")]
     pub mode: Option<OperatorModeArg>,

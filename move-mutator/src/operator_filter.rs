@@ -41,6 +41,7 @@ use crate::operators::break_continue::OPERATOR_NAME as BREAK_CONTINUE_NAME;
 use crate::operators::delete_stmt::OPERATOR_NAME as DELETE_STATEMENT_NAME;
 use crate::operators::ifelse::OPERATOR_NAME as IF_ELSE_NAME;
 use crate::operators::literal::OPERATOR_NAME as LITERAL_NAME;
+use crate::operators::resource::OPERATOR_NAME as RESOURCE_OPERATION_NAME;
 use crate::operators::unary::OPERATOR_NAME as UNARY_OPERATOR_NAME;
 use std::str::FromStr;
 
@@ -54,6 +55,7 @@ pub enum Operator {
     IfElseReplacement,
     LiteralReplacement,
     BinaryOperatorSwap,
+    ResourceOperationReplacement,
 }
 
 impl Operator {
@@ -66,10 +68,11 @@ impl Operator {
             Self::IfElseReplacement => IF_ELSE_NAME,
             Self::LiteralReplacement => LITERAL_NAME,
             Self::BinaryOperatorSwap => BINARY_SWAP_NAME,
+            Self::ResourceOperationReplacement => RESOURCE_OPERATION_NAME,
         }
     }
 
-    const fn all() -> [Operator; 7] {
+    const fn all() -> [Operator; 8] {
         [
             Operator::UnaryOperatorReplacement,
             Operator::DeleteStatement,
@@ -78,6 +81,7 @@ impl Operator {
             Operator::IfElseReplacement,
             Operator::LiteralReplacement,
             Operator::BinaryOperatorSwap,
+            Operator::ResourceOperationReplacement,
         ]
     }
 }
@@ -94,6 +98,7 @@ impl FromStr for Operator {
             IF_ELSE_NAME => Ok(Self::IfElseReplacement),
             LITERAL_NAME => Ok(Self::LiteralReplacement),
             BINARY_SWAP_NAME => Ok(Self::BinaryOperatorSwap),
+            RESOURCE_OPERATION_NAME => Ok(Self::ResourceOperationReplacement),
             _ => anyhow::bail!("Unknown operator: {}", s),
         }
     }
@@ -109,7 +114,7 @@ impl FromStr for Operator {
 /// - Light: binary_operator_swap, break_continue_replacement, delete_statement (3 operators)
 /// - Medium: Light + literal_replacement (4 operators)
 /// - Medium-only: literal_replacement (1 operator - only what's added in medium)
-/// - Heavy: All 7 operators
+/// - Heavy: All 8 operators
 /// - Heavy-only: unary_operator_replacement, binary_operator_replacement, if_else_replacement (3 operators - only what's added in heavy)
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum OperatorMode {
@@ -126,7 +131,7 @@ pub enum OperatorMode {
     MediumOnly,
 
     /// Heavy mode: All available operators for maximum test gap detection.
-    /// Includes all 7 operators, default mode.
+    /// Includes all 8 operators, default mode.
     #[default]
     Heavy,
 
@@ -299,7 +304,7 @@ mod tests {
     #[test]
     fn test_operator_all() {
         let all = Operator::all();
-        assert_eq!(all.len(), 7);
+        assert_eq!(all.len(), 8);
     }
 
     #[test]
@@ -345,7 +350,7 @@ mod tests {
     fn test_heavy_mode_operators() {
         let mode = OperatorMode::Heavy;
         let ops = mode.get_operators();
-        assert_eq!(ops.len(), 7);
+        assert_eq!(ops.len(), 8);
         // All operators should be present
         assert!(ops.contains(&Operator::UnaryOperatorReplacement.as_str()));
         assert!(ops.contains(&Operator::DeleteStatement.as_str()));
@@ -354,6 +359,7 @@ mod tests {
         assert!(ops.contains(&Operator::IfElseReplacement.as_str()));
         assert!(ops.contains(&Operator::LiteralReplacement.as_str()));
         assert!(ops.contains(&Operator::BinaryOperatorSwap.as_str()));
+        assert!(ops.contains(&Operator::ResourceOperationReplacement.as_str()));
     }
 
     #[test]
@@ -428,6 +434,14 @@ mod tests {
         assert_eq!(parsed.len(), 2);
         assert_eq!(parsed[0], Operator::DeleteStatement);
         assert_eq!(parsed[1], Operator::BinaryOperatorReplacement);
+    }
+
+    #[test]
+    fn test_resource_operation_from_str() {
+        assert_eq!(
+            Operator::from_str("resource_operation_replacement").unwrap(),
+            Operator::ResourceOperationReplacement
+        );
     }
 
     #[test]

@@ -10,7 +10,8 @@ use crate::{
     operator_filter,
     operators::{
         binary::Binary, binary_swap::BinarySwap, break_continue::BreakContinue,
-        delete_stmt::DeleteStmt, ifelse::IfElse, literal::Literal, unary::Unary, ExpLoc,
+        delete_stmt::DeleteStmt, ifelse::IfElse, literal::Literal, resource::Resource,
+        unary::Unary, ExpLoc,
     },
 };
 use move_model::{
@@ -279,7 +280,7 @@ fn parse_expression_and_find_mutants(
 
                 result
             },
-            Operation::Not => {
+            Operation::Not | Operation::Negate => {
                 if !conf
                     .operator_mode
                     .should_apply(operator_filter::Operator::UnaryOperatorReplacement)
@@ -291,6 +292,17 @@ fn parse_expression_and_find_mutants(
                     op.clone(),
                     function.module_env.env.get_node_loc(*node_id),
                     exps_loc,
+                ))))]
+            },
+            Operation::Exists(..) => {
+                if !conf
+                    .operator_mode
+                    .should_apply(operator_filter::Operator::ResourceOperationReplacement)
+                {
+                    return vec![];
+                }
+                vec![Mutant::new(MutationOp::new(Box::new(Resource::new(
+                    function.module_env.env.get_node_loc(*node_id),
                 ))))]
             },
             _ => vec![],
