@@ -2,7 +2,7 @@
 // Copyright © Aptos Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-use aptos::common::types::MovePackageOptions;
+use aptos_move_cli::MovePackageOptions;
 use aptos_framework::extended_checks;
 use clap::Parser;
 use move_model::metadata::{CompilerVersion, LanguageVersion};

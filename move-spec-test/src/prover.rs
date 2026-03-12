@@ -39,6 +39,7 @@ pub(crate) fn prove<W: WriteColor>(
                 .compiler_config
                 .language_version
                 .unwrap_or(LanguageVersion::V1),
+            with_bytecode: true,
         },
     )?;
 

@@ -223,7 +223,7 @@ fn parse_expression_and_find_mutants(
     trace!("Parsing expression {exp:?}");
     match exp {
         ExpData::Call(node_id, op, exps) => match op {
-            Operation::MoveTo | Operation::Abort => {
+            Operation::MoveTo | Operation::Abort(..) => {
                 if !conf
                     .operator_mode
                     .should_apply(operator_filter::Operator::DeleteStatement)

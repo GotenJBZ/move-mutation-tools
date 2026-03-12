@@ -26,7 +26,6 @@ move-prover = { workspace = true }
 mutator-common = { workspace = true }
 pretty_env_logger = { workspace = true }
 rayon = { workspace = true }
-serde = { workspace = true }
 termcolor = { workspace = true }
 
 [dev-dependencies]

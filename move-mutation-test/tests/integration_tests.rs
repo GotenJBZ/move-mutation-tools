@@ -1,4 +1,4 @@
-use aptos::common::types::MovePackageOptions;
+use aptos_move_cli::MovePackageOptions;
 use log::info;
 use move_model::metadata::{CompilerVersion, LanguageVersion};
 use move_mutation_test::{

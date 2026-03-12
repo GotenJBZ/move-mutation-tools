@@ -4,10 +4,10 @@
 
 use crate::cli::TestBuildConfig;
 use anyhow::{anyhow, Error};
-use aptos::move_tool::aptos_debug_natives::aptos_debug_natives;
+use aptos_move_cli::aptos_debug_natives::aptos_debug_natives;
 use aptos_gas_schedule::{MiscGasParameters, NativeGasParameters};
 use aptos_types::on_chain_config::aptos_test_feature_flags_genesis;
-use move_cli::base::test::UnitTestResult;
+use move_unit_test::package_test::UnitTestResult;
 use move_command_line_common::address::NumericalAddress;
 use move_package::BuildConfig;
 use move_unit_test::UnitTestingConfig;
@@ -134,7 +134,7 @@ fn run_tests<W: WriteColor + Send>(
     // while mutants with infinite loops will be killed quite quickly.
     let gas_limit = Some(cfg.gas_limit);
 
-    let result = move_cli::base::test::run_move_unit_tests(
+    let result = move_unit_test::package_test::run_move_unit_tests(
         package_path,
         config.clone(),
         UnitTestingConfig {
